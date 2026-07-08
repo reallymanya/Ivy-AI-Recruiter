@@ -1,3 +1,5 @@
+import { Show, UserButton } from "@clerk/nextjs";
+import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
@@ -8,7 +10,6 @@ import {
   CheckCircle2,
   ChevronRight,
   ClipboardCheck,
-  Clock3,
   FileUp,
   Headphones,
   Menu,
@@ -241,13 +242,21 @@ export default function Home() {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            <Button variant="ghost" className="h-9 px-3">
-              Log in
-            </Button>
-            <Button className="h-9 gap-2 rounded-lg px-4">
-              Start free
-              <ArrowRight className="size-4" />
-            </Button>
+            <Show when="signed-out">
+              <Button nativeButton={false} variant="ghost" className="h-9 px-3" render={<Link href="/sign-in" />}>
+                Log in
+              </Button>
+              <Button nativeButton={false} className="h-9 gap-2 rounded-lg px-4" render={<Link href="/sign-up" />}>
+                Start free
+                <ArrowRight className="size-4" />
+              </Button>
+            </Show>
+            <Show when="signed-in">
+              <Button nativeButton={false} variant="ghost" className="h-9 px-3" render={<Link href="/dashboard" />}>
+                Dashboard
+              </Button>
+              <UserButton />
+            </Show>
           </div>
 
           <Sheet>
@@ -278,8 +287,18 @@ export default function Home() {
                 ))}
               </div>
               <div className="mt-auto grid gap-2 border-t p-4">
-                <Button variant="outline">Log in</Button>
-                <Button>Start free</Button>
+                <Show when="signed-out">
+                  <Button nativeButton={false} variant="outline" render={<Link href="/sign-in" />}>
+                    Log in
+                  </Button>
+                  <Button nativeButton={false} render={<Link href="/sign-up" />}>Start free</Button>
+                </Show>
+                <Show when="signed-in">
+                  <Button nativeButton={false} render={<Link href="/dashboard" />}>Dashboard</Button>
+                  <div className="flex justify-center pt-2">
+                    <UserButton />
+                  </div>
+                </Show>
               </div>
             </SheetContent>
           </Sheet>
@@ -305,10 +324,18 @@ export default function Home() {
               and next steps.
             </p>
             <div className="mt-7 flex w-full max-w-full flex-col gap-3 sm:flex-row">
-              <Button size="lg" className="h-11 w-full gap-2 rounded-lg sm:w-auto">
-                Start free
-                <ArrowRight className="size-4" />
-              </Button>
+              <Show when="signed-out">
+                <Button nativeButton={false} size="lg" className="h-11 w-full gap-2 rounded-lg sm:w-auto" render={<Link href="/sign-up" />}>
+                  Start free
+                  <ArrowRight className="size-4" />
+                </Button>
+              </Show>
+              <Show when="signed-in">
+                <Button nativeButton={false} size="lg" className="h-11 w-full gap-2 rounded-lg sm:w-auto" render={<Link href="/dashboard" />}>
+                  Open dashboard
+                  <ArrowRight className="size-4" />
+                </Button>
+              </Show>
               <Button size="lg" variant="outline" className="h-11 w-full gap-2 rounded-lg sm:w-auto">
                 See product tour
                 <ChevronRight className="size-4" />
@@ -611,9 +638,16 @@ export default function Home() {
                 generation, voice-screen mock runs, and recruiter scorecards.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <Button size="lg" className="h-11 rounded-lg bg-white text-zinc-950 hover:bg-zinc-100">
-                  Start free
-                </Button>
+                <Show when="signed-out">
+                  <Button nativeButton={false} size="lg" className="h-11 rounded-lg bg-white text-zinc-950 hover:bg-zinc-100" render={<Link href="/sign-up" />}>
+                    Start free
+                  </Button>
+                </Show>
+                <Show when="signed-in">
+                  <Button nativeButton={false} size="lg" className="h-11 rounded-lg bg-white text-zinc-950 hover:bg-zinc-100" render={<Link href="/dashboard" />}>
+                    Open dashboard
+                  </Button>
+                </Show>
                 <Button size="lg" variant="outline" className="h-11 rounded-lg border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white">
                   Talk to sales
                 </Button>
