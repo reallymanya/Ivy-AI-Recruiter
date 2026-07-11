@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -62,6 +63,44 @@ export const users = pgTable(
   ],
 );
 
+export const recruiterSettings = pgTable(
+  "recruiter_settings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    companyName: text("company_name").notNull().default("Ivy Recruiting Team"),
+    agentName: text("agent_name").notNull().default("Ivy"),
+    voiceId: text("voice_id").notNull().default("Abhinav"),
+    voiceStyle: text("voice_style").notNull().default("Conversational"),
+    voiceLocale: text("voice_locale").notNull().default("en-IN"),
+    screeningQuestionCount: integer("screening_question_count").notNull().default(6),
+    technicalQuestionCount: integer("technical_question_count").notNull().default(8),
+    hrFinalQuestionCount: integer("hr_final_question_count").notNull().default(5),
+    silenceTimeoutSeconds: integer("silence_timeout_seconds").notNull().default(30),
+    allowFollowUps: boolean("allow_follow_ups").notNull().default(true),
+    interviewPrompt: text("interview_prompt"),
+    evaluationPrompt: text("evaluation_prompt"),
+    closingMessage: text("closing_message"),
+    companyLogoUrl: text("company_logo_url"),
+    emailSubjectTemplate: text("email_subject_template"),
+    emailIntro: text("email_intro"),
+    replyToEmail: text("reply_to_email"),
+    recruiterNotifications: boolean("recruiter_notifications").notNull().default(true),
+    notificationEmail: text("notification_email"),
+    lowScoreAlerts: boolean("low_score_alerts").notNull().default(true),
+    lowScoreThreshold: integer("low_score_threshold").notNull().default(60),
+    defaultJobLocation: text("default_job_location"),
+    defaultJobCurrency: text("default_job_currency").notNull().default("INR"),
+    defaultEmploymentType: text("default_employment_type").notNull().default("Full-time"),
+    timezone: text("timezone").notNull().default("Asia/Kolkata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("recruiter_settings_user_idx").on(table.userId)],
+);
+
 export const jobs = pgTable(
   "jobs",
   {
@@ -69,8 +108,15 @@ export const jobs = pgTable(
     title: text("title").notNull(),
     department: text("department"),
     location: text("location"),
+    employmentType: text("employment_type"),
+    level: text("level"),
+    minSalary: integer("min_salary"),
+    maxSalary: integer("max_salary"),
+    currency: text("currency"),
     status: jobStatus("status").notNull().default("draft"),
     description: text("description"),
+    responsibilities: text("responsibilities"),
+    requirements: text("requirements"),
     rubric: jsonb("rubric").$type<ScreeningRubric>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -88,8 +134,20 @@ export const candidates = pgTable(
     name: text("name").notNull(),
     email: text("email"),
     phone: text("phone"),
+    location: text("location"),
+    currentTitle: text("current_title"),
+    currentCompany: text("current_company"),
+    linkedinUrl: text("linkedin_url"),
+    portfolioUrl: text("portfolio_url"),
+    experienceYears: integer("experience_years"),
+    skills: jsonb("skills").$type<string[]>(),
+    strengths: jsonb("strengths").$type<string[]>(),
+    weaknesses: jsonb("weaknesses").$type<string[]>(),
     source: text("source"),
     resumeText: text("resume_text"),
+    resumeFileName: text("resume_file_name"),
+    resumeFileType: text("resume_file_type"),
+    resumeFileData: text("resume_file_data"),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -110,7 +168,10 @@ export const interviewSessions = pgTable(
     candidateId: uuid("candidate_id")
       .notNull()
       .references(() => candidates.id, { onDelete: "cascade" }),
+    recruiterId: uuid("recruiter_id").references(() => users.id, { onDelete: "set null" }),
+    interviewType: text("interview_type"),
     status: interviewStatus("status").notNull().default("scheduled"),
+    invitedAt: timestamp("invited_at", { withTimezone: true }),
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
     startedAt: timestamp("started_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
@@ -167,11 +228,27 @@ export const jobsRelations = relations(jobs, ({ many }) => ({
   interviewSessions: many(interviewSessions),
 }));
 
+export const usersRelations = relations(users, ({ one, many }) => ({
+  settings: one(recruiterSettings),
+  interviewSessions: many(interviewSessions),
+}));
+
+export const recruiterSettingsRelations = relations(recruiterSettings, ({ one }) => ({
+  user: one(users, {
+    fields: [recruiterSettings.userId],
+    references: [users.id],
+  }),
+}));
+
 export const candidatesRelations = relations(candidates, ({ many }) => ({
   interviewSessions: many(interviewSessions),
 }));
 
 export const interviewSessionsRelations = relations(interviewSessions, ({ one, many }) => ({
+  recruiter: one(users, {
+    fields: [interviewSessions.recruiterId],
+    references: [users.id],
+  }),
   job: one(jobs, {
     fields: [interviewSessions.jobId],
     references: [jobs.id],
