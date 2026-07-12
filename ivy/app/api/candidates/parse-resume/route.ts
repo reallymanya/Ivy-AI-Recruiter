@@ -1,11 +1,10 @@
-import path from "node:path";
-import { pathToFileURL } from "node:url";
-
 import { auth } from "@clerk/nextjs/server";
 import mammoth from "mammoth";
 import { NextResponse } from "next/server";
+import { PDFParse } from "pdf-parse";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MAX_RESUME_CHARS = 20_000;
@@ -30,29 +29,6 @@ type ParsedCandidate = {
   resumeFileName: string;
   resumeFileType: string;
   resumeFileData: string;
-};
-
-type PdfTextItem = {
-  str?: string;
-};
-
-type PdfDocument = {
-  numPages: number;
-  getPage(pageNumber: number): Promise<{
-    getTextContent(): Promise<{ items: PdfTextItem[] }>;
-  }>;
-  destroy(): Promise<void>;
-};
-
-type PdfJsModule = {
-  getDocument(options: {
-    data: Uint8Array;
-    disableFontFace: boolean;
-    isEvalSupported: boolean;
-    useWorkerFetch: boolean;
-  }): {
-    promise: Promise<PdfDocument>;
-  };
 };
 
 export async function POST(request: Request) {
@@ -164,51 +140,15 @@ async function extractResumeText(file: File, buffer: Buffer) {
 }
 
 async function extractPdfText(buffer: Buffer) {
-  const pdfjs = await loadPdfJs();
-  const loadingTask = pdfjs.getDocument({
-    data: new Uint8Array(buffer),
-    disableFontFace: true,
-    isEvalSupported: false,
-    useWorkerFetch: false,
-  });
-  const document = await loadingTask.promise;
-  const pageTexts: string[] = [];
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
 
   try {
-    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-      const page = await document.getPage(pageNumber);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item) => item.str ?? "")
-        .filter(Boolean)
-        .join(" ");
+    const result = await parser.getText();
 
-      if (pageText.trim()) {
-        pageTexts.push(pageText);
-      }
-    }
+    return result.text;
   } finally {
-    await document.destroy();
+    await parser.destroy();
   }
-
-  return pageTexts.join("\n\n");
-}
-
-async function loadPdfJs(): Promise<PdfJsModule> {
-  const pdfJsPath = path.join(
-    process.cwd(),
-    "node_modules",
-    "pdfjs-dist",
-    "legacy",
-    "build",
-    "pdf.mjs",
-  );
-  const pdfJsUrl = pathToFileURL(pdfJsPath).href;
-  const loadModule = new Function("specifier", "return import(specifier)") as (
-    specifier: string,
-  ) => Promise<PdfJsModule>;
-
-  return loadModule(pdfJsUrl);
 }
 
 async function parseResumeWithGroq({
