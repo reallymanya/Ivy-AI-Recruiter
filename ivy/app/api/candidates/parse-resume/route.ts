@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import mammoth from "mammoth";
 import { NextResponse } from "next/server";
+import "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
 
 export const runtime = "nodejs";
