@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import {
   ArrowRight,
   Briefcase,
@@ -51,17 +51,17 @@ import { getSettingsForUser } from "@/lib/interview/agent-settings";
 import { ProfileAccountMenuItem } from "./profile-account-menu-item";
 
 export default async function DashboardPage() {
-  const [syncedUser, jobRows, candidateRows, sessionRows, recentCompleted] = await Promise.all([
-    getDashboardUser(),
-    db.select().from(jobs).orderBy(desc(jobs.createdAt)),
-    db.select({ id: candidates.id }).from(candidates),
+  const syncedUser = await getDashboardUser();
+  const [jobRows, candidateRows, sessionRows, recentCompleted] = await Promise.all([
+    db.select().from(jobs).where(eq(jobs.recruiterId, syncedUser.id)).orderBy(desc(jobs.createdAt)),
+    db.select({ id: candidates.id }).from(candidates).where(eq(candidates.recruiterId, syncedUser.id)),
     db.select({
       id: interviewSessions.id,
       jobId: interviewSessions.jobId,
       status: interviewSessions.status,
       invitedAt: interviewSessions.invitedAt,
       overallScore: interviewSessions.overallScore,
-    }).from(interviewSessions),
+    }).from(interviewSessions).where(eq(interviewSessions.recruiterId, syncedUser.id)),
     db.select({
       id: interviewSessions.id,
       candidateId: candidates.id,
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
       .from(interviewSessions)
       .innerJoin(candidates, eq(candidates.id, interviewSessions.candidateId))
       .innerJoin(jobs, eq(jobs.id, interviewSessions.jobId))
-      .where(eq(interviewSessions.status, "completed"))
+      .where(and(eq(interviewSessions.status, "completed"), eq(interviewSessions.recruiterId, syncedUser.id)))
       .orderBy(desc(interviewSessions.completedAt))
       .limit(5),
   ]);

@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import {
   Briefcase,
   BriefcaseBusiness,
@@ -40,17 +40,18 @@ import {
 } from "@/components/ui/sidebar";
 import { getDashboardUser } from "@/lib/auth/dashboard-user";
 import { db } from "@/lib/db";
-import { jobs } from "@/lib/db/schema";
+import { interviewSessions, jobs } from "@/lib/db/schema";
 import { getSettingsForUser } from "@/lib/interview/agent-settings";
 
 import { InterviewsWorkspace, type InterviewWorkspaceSession } from "./interviews-workspace";
 import { ProfileAccountMenuItem } from "../profile-account-menu-item";
 
 export default async function InterviewsPage() {
-  const [syncedUser, jobRows, sessionRows] = await Promise.all([
-    getDashboardUser(),
-    db.select().from(jobs).orderBy(desc(jobs.createdAt)),
+  const syncedUser = await getDashboardUser();
+  const [jobRows, sessionRows] = await Promise.all([
+    db.select().from(jobs).where(eq(jobs.recruiterId, syncedUser.id)).orderBy(desc(jobs.createdAt)),
     db.query.interviewSessions.findMany({
+      where: eq(interviewSessions.recruiterId, syncedUser.id),
       with: { candidate: true },
       orderBy: (table, { desc: descending }) => [descending(table.updatedAt)],
     }),

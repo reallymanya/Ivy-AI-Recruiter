@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { candidates } from "@/lib/db/schema";
+import { getDashboardUser } from "@/lib/auth/dashboard-user";
 
 export type CandidateFormState = {
   ok: boolean;
@@ -16,7 +16,7 @@ export async function createCandidate(
   _previousState: CandidateFormState,
   formData: FormData,
 ): Promise<CandidateFormState> {
-  await auth.protect();
+  const recruiter = await getDashboardUser();
 
   const name = getFormString(formData, "name");
   const email = getFormString(formData, "email");
@@ -42,6 +42,7 @@ export async function createCandidate(
   }
 
   await db.insert(candidates).values({
+    recruiterId: recruiter.id,
     name,
     email: email || null,
     phone: phone || null,
@@ -69,7 +70,7 @@ export async function createCandidate(
 }
 
 export async function deleteCandidate(formData: FormData) {
-  await auth.protect();
+  const recruiter = await getDashboardUser();
 
   const candidateId = getFormString(formData, "candidateId");
 
@@ -77,7 +78,7 @@ export async function deleteCandidate(formData: FormData) {
     return;
   }
 
-  await db.delete(candidates).where(eq(candidates.id, candidateId));
+  await db.delete(candidates).where(and(eq(candidates.id, candidateId), eq(candidates.recruiterId, recruiter.id)));
 
   revalidatePath("/dashboard/candidates");
   revalidatePath("/dashboard");

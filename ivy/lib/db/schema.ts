@@ -105,6 +105,7 @@ export const jobs = pgTable(
   "jobs",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    recruiterId: uuid("recruiter_id").references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     department: text("department"),
     location: text("location"),
@@ -123,6 +124,7 @@ export const jobs = pgTable(
   },
   (table) => [
     index("jobs_status_idx").on(table.status),
+    index("jobs_recruiter_idx").on(table.recruiterId),
     index("jobs_created_at_idx").on(table.createdAt),
   ],
 );
@@ -131,6 +133,7 @@ export const candidates = pgTable(
   "candidates",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    recruiterId: uuid("recruiter_id").references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     email: text("email"),
     phone: text("phone"),
@@ -154,6 +157,7 @@ export const candidates = pgTable(
   },
   (table) => [
     index("candidates_email_idx").on(table.email),
+    index("candidates_recruiter_idx").on(table.recruiterId),
     index("candidates_created_at_idx").on(table.createdAt),
   ],
 );

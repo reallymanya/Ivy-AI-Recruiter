@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId)).limit(1);
+  const [job] = await db.select().from(jobs).where(and(eq(jobs.id, jobId), eq(jobs.recruiterId, recruiter.id))).limit(1);
 
   if (!job) {
     return NextResponse.json({ error: "Job not found." }, { status: 404 });
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   const candidateRows = await db
     .select()
     .from(candidates)
-    .where(inArray(candidates.id, candidateIds));
+    .where(and(inArray(candidates.id, candidateIds), eq(candidates.recruiterId, recruiter.id)));
 
   const subjectTemplate =
     normalizeTemplate(payload.emailSubject) || settings.emailSubjectTemplate;
@@ -111,6 +111,7 @@ ${settings.companyName}`;
         and(
           eq(table.jobId, job.id),
           eq(table.candidateId, candidate.id),
+          eq(table.recruiterId, recruiter.id),
           eq(table.status, "scheduled"),
         ),
     });

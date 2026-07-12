@@ -1,9 +1,9 @@
-import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { candidates } from "@/lib/db/schema";
+import { getDashboardUser } from "@/lib/auth/dashboard-user";
 
 type ResumeDownloadRouteProps = {
   params: Promise<{
@@ -12,11 +12,11 @@ type ResumeDownloadRouteProps = {
 };
 
 export async function GET(_request: Request, { params }: ResumeDownloadRouteProps) {
-  await auth.protect();
+  const recruiter = await getDashboardUser();
 
   const { candidateId } = await params;
   const candidate = await db.query.candidates.findFirst({
-    where: eq(candidates.id, candidateId),
+    where: and(eq(candidates.id, candidateId), eq(candidates.recruiterId, recruiter.id)),
   });
 
   if (!candidate?.resumeFileData && !candidate?.resumeText) {

@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import {
   Briefcase,
   BriefcaseBusiness,
@@ -78,10 +78,9 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
   const view = params.view === "list" ? "list" : "grid";
   const requestedPage = Number.parseInt(params.page ?? "1", 10);
 
-  const [syncedUser, candidateRows] = await Promise.all([
-    getDashboardUser(),
-    db.select().from(candidates).orderBy(desc(candidates.createdAt)),
-  ]);
+  const syncedUser = await getDashboardUser();
+  const candidateRows = await db.select().from(candidates)
+    .where(eq(candidates.recruiterId, syncedUser.id)).orderBy(desc(candidates.createdAt));
 
   const displayName =
     [syncedUser.firstName, syncedUser.lastName].filter(Boolean).join(" ") ||

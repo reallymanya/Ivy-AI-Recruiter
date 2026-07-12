@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   ArrowLeft,
   Award,
@@ -25,13 +25,11 @@ export default async function InterviewAnalysisPage({
   params: Promise<{ interviewId: string }>;
 }) {
   const { interviewId } = await params;
-  const [, session] = await Promise.all([
-    getDashboardUser(),
-    db.query.interviewSessions.findFirst({
-      where: eq(interviewSessions.id, interviewId),
-      with: { candidate: true, job: true, reports: true, messages: true },
-    }),
-  ]);
+  const recruiter = await getDashboardUser();
+  const session = await db.query.interviewSessions.findFirst({
+    where: and(eq(interviewSessions.id, interviewId), eq(interviewSessions.recruiterId, recruiter.id)),
+    with: { candidate: true, job: true, reports: true, messages: true },
+  });
 
   if (!session || session.status !== "completed") notFound();
 

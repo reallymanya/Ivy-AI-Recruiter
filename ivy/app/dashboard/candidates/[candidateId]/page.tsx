@@ -65,10 +65,10 @@ type CandidateProfilePageProps = {
 export default async function CandidateProfilePage({ params }: CandidateProfilePageProps) {
   const { candidateId } = await params;
 
-  const [syncedUser, candidate, latestCompletedInterview] = await Promise.all([
-    getDashboardUser(),
+  const syncedUser = await getDashboardUser();
+  const [candidate, latestCompletedInterview] = await Promise.all([
     db.query.candidates.findFirst({
-      where: eq(candidates.id, candidateId),
+      where: and(eq(candidates.id, candidateId), eq(candidates.recruiterId, syncedUser.id)),
     }),
     db
       .select({
@@ -83,6 +83,7 @@ export default async function CandidateProfilePage({ params }: CandidateProfileP
         and(
           eq(interviewSessions.candidateId, candidateId),
           eq(interviewSessions.status, "completed"),
+          eq(interviewSessions.recruiterId, syncedUser.id),
         ),
       )
       .orderBy(desc(interviewSessions.completedAt))

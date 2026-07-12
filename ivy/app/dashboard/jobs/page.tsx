@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import {
   Briefcase,
   BriefcaseBusiness,
@@ -64,10 +64,9 @@ import { ProfileAccountMenuItem } from "../profile-account-menu-item";
 type JobRow = typeof jobs.$inferSelect;
 
 export default async function JobsPage() {
-  const [syncedUser, jobRows] = await Promise.all([
-    getDashboardUser(),
-    db.select().from(jobs).orderBy(desc(jobs.createdAt)),
-  ]);
+  const syncedUser = await getDashboardUser();
+  const jobRows = await db.select().from(jobs)
+    .where(eq(jobs.recruiterId, syncedUser.id)).orderBy(desc(jobs.createdAt));
   const recruiterSettings = await getSettingsForUser(syncedUser.id);
   const jobDefaults = {
     location: recruiterSettings.defaultJobLocation,

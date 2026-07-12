@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "jobId is required." }, { status: 400 });
   }
 
-  const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId)).limit(1);
+  const [job] = await db.select().from(jobs).where(and(eq(jobs.id, jobId), eq(jobs.recruiterId, recruiter.id))).limit(1);
 
   if (!job) {
     return NextResponse.json({ error: "Job not found." }, { status: 404 });

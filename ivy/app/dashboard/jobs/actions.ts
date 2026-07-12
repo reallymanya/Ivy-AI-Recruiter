@@ -1,11 +1,11 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db";
 import { jobs, jobStatus, type ScreeningRubric } from "@/lib/db/schema";
+import { getDashboardUser } from "@/lib/auth/dashboard-user";
 
 export type JobFormState = {
   ok: boolean;
@@ -18,7 +18,7 @@ export async function createJob(
   _previousState: JobFormState,
   formData: FormData,
 ): Promise<JobFormState> {
-  await auth.protect();
+  const recruiter = await getDashboardUser();
 
   const title = getFormString(formData, "title");
   const department = getFormString(formData, "department");
@@ -39,6 +39,7 @@ export async function createJob(
   }
 
   await db.insert(jobs).values({
+    recruiterId: recruiter.id,
     title,
     department: department || null,
     location: location || null,
@@ -61,7 +62,7 @@ export async function createJob(
 }
 
 export async function updateJobStatus(formData: FormData) {
-  await auth.protect();
+  const recruiter = await getDashboardUser();
 
   const jobId = getFormString(formData, "jobId");
   const status = normalizeJobStatus(getFormString(formData, "status"));
@@ -76,7 +77,7 @@ export async function updateJobStatus(formData: FormData) {
       status,
       updatedAt: new Date(),
     })
-    .where(eq(jobs.id, jobId));
+    .where(and(eq(jobs.id, jobId), eq(jobs.recruiterId, recruiter.id)));
 
   revalidatePath("/dashboard/jobs");
   revalidatePath("/dashboard");
@@ -86,7 +87,7 @@ export async function updateJobStatusById(
   jobId: string,
   status: (typeof jobStatus.enumValues)[number],
 ) {
-  await auth.protect();
+  const recruiter = await getDashboardUser();
 
   if (!jobId) {
     return;
@@ -98,14 +99,14 @@ export async function updateJobStatusById(
       status: normalizeJobStatus(status),
       updatedAt: new Date(),
     })
-    .where(eq(jobs.id, jobId));
+    .where(and(eq(jobs.id, jobId), eq(jobs.recruiterId, recruiter.id)));
 
   revalidatePath("/dashboard/jobs");
   revalidatePath("/dashboard");
 }
 
 export async function deleteJob(formData: FormData) {
-  await auth.protect();
+  const recruiter = await getDashboardUser();
 
   const jobId = getFormString(formData, "jobId");
 
@@ -113,7 +114,7 @@ export async function deleteJob(formData: FormData) {
     return;
   }
 
-  await db.delete(jobs).where(eq(jobs.id, jobId));
+  await db.delete(jobs).where(and(eq(jobs.id, jobId), eq(jobs.recruiterId, recruiter.id)));
 
   revalidatePath("/dashboard/jobs");
   revalidatePath("/dashboard");

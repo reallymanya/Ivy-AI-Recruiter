@@ -1,9 +1,9 @@
-import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { candidates, jobs } from "@/lib/db/schema";
+import { getDashboardUser } from "@/lib/auth/dashboard-user";
 
 const GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MIN_MATCH_SCORE = 70;
@@ -22,7 +22,7 @@ type CandidateMatch = {
 };
 
 export async function POST(request: Request) {
-  await auth.protect();
+  const recruiter = await getDashboardUser();
 
   const payload = (await request.json()) as { jobId?: string };
 
@@ -30,13 +30,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "jobId is required." }, { status: 400 });
   }
 
-  const [job] = await db.select().from(jobs).where(eq(jobs.id, payload.jobId)).limit(1);
+  const [job] = await db.select().from(jobs).where(and(eq(jobs.id, payload.jobId), eq(jobs.recruiterId, recruiter.id))).limit(1);
 
   if (!job) {
     return NextResponse.json({ error: "Job not found." }, { status: 404 });
   }
 
-  const candidateRows = await db.select().from(candidates);
+  const candidateRows = await db.select().from(candidates).where(eq(candidates.recruiterId, recruiter.id));
 
   if (candidateRows.length === 0) {
     return NextResponse.json({ matches: [], source: "fallback" });
