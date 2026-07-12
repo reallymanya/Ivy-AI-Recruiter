@@ -462,7 +462,7 @@ export default function Home() {
                         ["Role alignment", "91"],
                       ].map(([label, value]) => (
                         <div key={label} className="rounded-lg bg-zinc-50 p-3">
-                          <p className="text-xs text-zinc-500">{label}</p>
+                          <p className="min-h-8 text-xs leading-4 text-zinc-500">{label}</p>
                           <p className="mt-1 text-xl font-semibold">{value}%</p>
                         </div>
                       ))}
